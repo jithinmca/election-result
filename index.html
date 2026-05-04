@@ -14,9 +14,16 @@
                 <button class="state-tab active" id="tab-S11" onclick="changeState('S11')">Kerala</button>
                 <button class="state-tab" id="tab-S22" onclick="changeState('S22')">Tamil Nadu</button>
             </div>
-            <div style="position: relative;">
-                <input type="text" id="global-search" oninput="handleSearch(event)" placeholder="Search candidate, district..." style="padding: 4px 8px; border-radius: 4px; border: 1px solid #cbd5e1; outline: none; font-size: 11px; width: 160px; font-family: 'Inter', sans-serif;">
-                <span id="sync-indicator" style="display: none; position: absolute; right: 6px; top: 4px; font-size: 11px; font-weight: bold; color: #10B981;">↻</span>
+            <div style="position: relative; display: flex; gap: 6px;">
+                <select id="sort-select" onchange="handleSortChange(event)" style="padding: 4px 6px; border-radius: 4px; border: 1px solid #cbd5e1; outline: none; font-size: 11px; font-family: 'Inter', sans-serif;">
+                    <option value="district">By District</option>
+                    <option value="margin_asc">Margin: Tightest</option>
+                    <option value="margin_desc">Margin: Highest</option>
+                </select>
+                <div style="position: relative;">
+                    <input type="text" id="global-search" oninput="handleSearch(event)" placeholder="Search candidate, district..." style="padding: 4px 8px; border-radius: 4px; border: 1px solid #cbd5e1; outline: none; font-size: 11px; width: 160px; font-family: 'Inter', sans-serif;">
+                    <span id="sync-indicator" style="display: none; position: absolute; right: 6px; top: 4px; font-size: 11px; font-weight: bold; color: #10B981;">↻</span>
+                </div>
             </div>
         </div>
         <div id="dynamic-summary-cards" style="display: flex; gap: 6px; flex-wrap: wrap;">
