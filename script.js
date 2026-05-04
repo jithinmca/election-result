@@ -161,9 +161,25 @@ async function fetchData(isBackgroundRefresh = false) {
         }
         
         const results = await Promise.all(promises);
-        currentElectionData = results.filter(r => r !== null && r.candidates.length > 0);
+        const validResults = results.filter(r => r !== null && r.candidates && r.candidates.length > 0);
         
-        processData(currentElectionData, isBackgroundRefresh);
+        if (validResults.length > 0) {
+            if (currentElectionData.length === 0) {
+                currentElectionData = validResults;
+            } else {
+                validResults.forEach(newEntry => {
+                    const idx = currentElectionData.findIndex(e => e.acno === newEntry.acno);
+                    if (idx !== -1) {
+                        currentElectionData[idx] = newEntry;
+                    } else {
+                        currentElectionData.push(newEntry);
+                    }
+                });
+            }
+            processData(currentElectionData, isBackgroundRefresh);
+        } else if (!isBackgroundRefresh) {
+            document.getElementById('loader').innerText = 'Could not load data. ECI server may be busy.';
+        }
     } catch (error) {
         console.error("Fetch failed", error);
         if (!isBackgroundRefresh) {
