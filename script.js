@@ -114,8 +114,8 @@ function getFrontFromParty(party, stateCode) {
         const tvk = ['TAMILAGA VETTRI KAZHAGAM', 'TAMILAGA VETTRI'];
         
         if (tvk.some(p => party.includes(p))) return 'TVK';
-        if (dmk.some(p => party.includes(p))) return 'DMK';
         if (admk.some(p => party.includes(p))) return 'ADMK';
+        if (dmk.some(p => party.includes(p))) return 'DMK';
         if (nda.some(p => party.includes(p))) return 'NDA';
     }
     
@@ -348,8 +348,8 @@ function renderGrid(districts, pinnedIds) {
                 else if (cand.party.includes('Communist Party of India')) partyAlias = 'CPI';
                 else if (cand.party.includes('Congress')) partyAlias = 'INC';
                 else if (cand.party.includes('Bharatiya Janata')) partyAlias = 'BJP';
-                else if (cand.party.includes('Dravida Munnetra Kazhagam')) partyAlias = 'DMK';
                 else if (cand.party.includes('Anna Dravida Munnetra Kazhagam')) partyAlias = 'ADM';
+                else if (cand.party.includes('Dravida Munnetra Kazhagam')) partyAlias = 'DMK';
                 else if (cand.party.includes('Tamilaga Vettri Kazhagam')) partyAlias = 'TVK';
 
                 candidateRows += `
