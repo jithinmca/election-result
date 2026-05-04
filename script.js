@@ -15,6 +15,7 @@ let stateConfig = {
 };
 
 let searchQuery = '';
+let currentSortMode = 'district';
 
 document.addEventListener('DOMContentLoaded', () => {
     fetchData(false);
@@ -40,7 +41,16 @@ window.changeState = function(stateCode) {
     
     document.getElementById('global-search').value = '';
     searchQuery = '';
+    document.getElementById('sort-select').value = 'district';
+    currentSortMode = 'district';
     fetchData(false);
+}
+
+window.handleSortChange = function(e) {
+    currentSortMode = e.target.value;
+    if (currentElectionData.length > 0) {
+        processData(currentElectionData, true);
+    }
 }
 
 window.handleSearch = function(e) {
@@ -331,7 +341,7 @@ function processData(data, isBackgroundRefresh = false) {
             }
         }
 
-        const distName = item.district;
+        const distName = currentSortMode === 'district' ? item.district : 'ALL CONSTITUENCIES';
         if (!districts[distName]) {
             districts[distName] = [];
         }
@@ -344,6 +354,16 @@ function processData(data, isBackgroundRefresh = false) {
 
     if (pinnedList.length > 0) {
         districts[' PINNED'] = pinnedList;
+    }
+
+    if (currentSortMode === 'margin_asc') {
+        if (districts['ALL CONSTITUENCIES']) {
+            districts['ALL CONSTITUENCIES'].sort((a, b) => a.leadvotes - b.leadvotes);
+        }
+    } else if (currentSortMode === 'margin_desc') {
+        if (districts['ALL CONSTITUENCIES']) {
+            districts['ALL CONSTITUENCIES'].sort((a, b) => b.leadvotes - a.leadvotes);
+        }
     }
 
     generateSummaryCards(frontCounts);
@@ -382,7 +402,9 @@ function renderGrid(districts, pinnedIds) {
 
     districtNames.forEach(distName => {
         const districtData = districts[distName];
-        districtData.sort((a, b) => a.acno - b.acno);
+        if (currentSortMode === 'district' || distName === ' PINNED') {
+             districtData.sort((a, b) => a.acno - b.acno);
+        }
 
         const isPinnedSection = distName === ' PINNED';
         const dColor = isPinnedSection ? '#EAB308' : districtColors[colorIndex % districtColors.length];
