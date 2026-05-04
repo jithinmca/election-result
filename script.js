@@ -111,7 +111,7 @@ function getFrontFromParty(party, stateCode) {
         const dmk = ['DRAVIDA MUNNETRA KAZHAGAM', 'INDIAN NATIONAL CONGRESS', 'VIDUTHALAI CHIRUTHAIGAL KATCHI', 'COMMUNIST PARTY', 'MARUMALARCHI DRAVIDA MUNNETRA KAZHAGAM'];
         const admk = ['ALL INDIA ANNA DRAVIDA MUNNETRA KAZHAGAM', 'DESIYA MURPOKKU DRAVIDA KAZHAGAM'];
         const nda = ['BHARATIYA JANATA PARTY', 'PATTALI MAKKAL KATCHI', 'AMMA MAKKAL MUNNETRA KAZHAGAM'];
-        const tvk = ['TAMIZAGA VETRI KAZHAGAM'];
+        const tvk = ['TAMILAGA VETTRI KAZHAGAM', 'TAMILAGA VETTRI'];
         
         if (tvk.some(p => party.includes(p))) return 'TVK';
         if (dmk.some(p => party.includes(p))) return 'DMK';
@@ -295,6 +295,9 @@ function renderGrid(districts, pinnedIds) {
         
         const districtSection = document.createElement('div');
         districtSection.className = 'district-section';
+        if (districtData.length > 25) {
+            districtSection.classList.add('full-width');
+        }
         districtSection.style.borderTopColor = dColor;
 
         const titleText = isPinnedSection ? '📌 PINNED FAVORITES' : distName.toUpperCase();
@@ -347,7 +350,7 @@ function renderGrid(districts, pinnedIds) {
                 else if (cand.party.includes('Bharatiya Janata')) partyAlias = 'BJP';
                 else if (cand.party.includes('Dravida Munnetra Kazhagam')) partyAlias = 'DMK';
                 else if (cand.party.includes('Anna Dravida Munnetra Kazhagam')) partyAlias = 'ADM';
-                else if (cand.party.includes('Tamizaga Vetri Kazhagam')) partyAlias = 'TVK';
+                else if (cand.party.includes('Tamilaga Vettri Kazhagam')) partyAlias = 'TVK';
 
                 candidateRows += `
                     <div class="cand-row ${isPos1} ${rowFrontClass}">
