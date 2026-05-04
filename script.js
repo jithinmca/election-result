@@ -14,10 +14,12 @@ let stateConfig = {
     fronts: ['LDF', 'UDF', 'NDA']
 };
 
+let searchQuery = '';
+
 document.addEventListener('DOMContentLoaded', () => {
-    fetchData();
-    // Refresh data periodically (e.g., every 60s)
-    setInterval(fetchData, 60000);
+    fetchData(false);
+    // Refresh data periodically completely quietly in the background without emptying screen
+    setInterval(() => fetchData(true), 30000);
 });
 
 window.changeState = function(stateCode) {
@@ -36,7 +38,66 @@ window.changeState = function(stateCode) {
     currentElectionData = [];
     document.getElementById('districts-container').innerHTML = '';
     
-    fetchData();
+    document.getElementById('global-search').value = '';
+    searchQuery = '';
+    fetchData(false);
+}
+
+window.handleSearch = function(e) {
+    searchQuery = e.target.value.toLowerCase().trim();
+    applySearchFilter();
+}
+
+function applySearchFilter() {
+    const cards = document.querySelectorAll('.constituency-card');
+    cards.forEach(card => {
+        if (!searchQuery) {
+            card.classList.remove('hidden');
+            return;
+        }
+        
+        let shouldShow = false;
+        
+        // Check constituency name
+        const cName = card.querySelector('.c-name').textContent.toLowerCase();
+        if (cName.includes(searchQuery)) shouldShow = true;
+        
+        // Check district string from title bar wrapper
+        const distSection = card.closest('.district-section');
+        if (distSection) {
+            const dTitle = distSection.querySelector('.district-title-bar span').textContent.toLowerCase();
+            if (dTitle.includes(searchQuery)) shouldShow = true;
+        }
+
+        // Check candidate names
+        const candNames = card.querySelectorAll('.cand-name');
+        candNames.forEach(cn => {
+            if (cn.textContent.toLowerCase().includes(searchQuery)) shouldShow = true;
+        });
+        
+        // Check party badges
+        const badges = card.querySelectorAll('.party-badge');
+        badges.forEach(b => {
+             if (b.textContent.toLowerCase().includes(searchQuery) || b.title.toLowerCase().includes(searchQuery)) shouldShow = true;
+        });
+
+        if (shouldShow) {
+            card.classList.remove('hidden');
+        } else {
+            card.classList.add('hidden');
+        }
+    });
+    
+    // Hide empty district sections
+    const sections = document.querySelectorAll('.district-section');
+    sections.forEach(sec => {
+        const visibleCards = sec.querySelectorAll('.constituency-card:not(.hidden)');
+        if (visibleCards.length === 0) {
+            sec.classList.add('hidden');
+        } else {
+            sec.classList.remove('hidden');
+        }
+    });
 }
 
 async function fetchDistrictMap() {
@@ -57,11 +118,16 @@ async function fetchDistrictMap() {
     }
 }
 
-async function fetchData() {
+async function fetchData(isBackgroundRefresh = false) {
     await fetchDistrictMap();
     
-    document.getElementById('dashboard').style.display = 'none';
-    document.getElementById('loader').style.display = 'block';
+    if (!isBackgroundRefresh) {
+        document.getElementById('dashboard').style.display = 'none';
+        document.getElementById('loader').style.display = 'block';
+    } else {
+        document.getElementById('sync-indicator').style.display = 'inline';
+    }
+    
     document.getElementById('fetch-total').innerText = stateConfig.count;
     document.getElementById('fetch-progress').innerText = 0;
 
@@ -87,10 +153,18 @@ async function fetchData() {
         const results = await Promise.all(promises);
         currentElectionData = results.filter(r => r !== null && r.candidates.length > 0);
         
-        processData(currentElectionData);
+        processData(currentElectionData, isBackgroundRefresh);
     } catch (error) {
         console.error("Fetch failed", error);
-        document.getElementById('loader').innerText = 'CRITICAL ERROR fetching ECI data.';
+        if (!isBackgroundRefresh) {
+            document.getElementById('loader').innerText = 'CRITICAL ERROR fetching ECI data.';
+        }
+    } finally {
+        if (isBackgroundRefresh) {
+            setTimeout(() => {
+                document.getElementById('sync-indicator').style.display = 'none';
+            }, 1000);
+        }
     }
 }
 
@@ -127,10 +201,25 @@ function parseEciHtml(html, acno, stateCode) {
     const doc = parser.parseFromString(html, 'text/html');
 
     let roundStatus = '';
+    let isCompleted = false;
     const roundEl = doc.querySelector('.round-status');
     if (roundEl) {
-        const match = roundEl.textContent.match(/(\d+\s*\/\s*\d+)/);
-        if (match) roundStatus = match[1].replace(/\s/g, '');
+        const text = roundEl.textContent;
+        if (text.toLowerCase().includes('result')) {
+            isCompleted = true;
+            roundStatus = 'Final';
+        } else {
+            const match = text.match(/(\d+)\s*\/\s*(\d+)/);
+            if (match) {
+                roundStatus = match[1] + '/' + match[2];
+                if (parseInt(match[1]) === parseInt(match[2]) && parseInt(match[2]) > 0) {
+                    isCompleted = true;
+                }
+            }
+        }
+    } else if (doc.body && doc.body.textContent.toLowerCase().includes('result declared')) {
+         isCompleted = true;
+         roundStatus = 'Final';
     }
     
     const titleEl = doc.querySelector('h2 span');
@@ -176,6 +265,7 @@ function parseEciHtml(html, acno, stateCode) {
         constituency: cName,
         leadvotes: margin,
         roundText: roundStatus,
+        isCompleted: isCompleted,
         candidates: candidates
     };
 }
@@ -215,9 +305,11 @@ function generateSummaryCards(frontCounts) {
     container.innerHTML += `<div class="card card-oth">OTH: <span>${frontCounts['OTH'] || 0}</span></div>`;
 }
 
-function processData(data) {
-    document.getElementById('loader').style.display = 'none';
-    document.getElementById('dashboard').style.display = 'block';
+function processData(data, isBackgroundRefresh = false) {
+    if (!isBackgroundRefresh) {
+        document.getElementById('loader').style.display = 'none';
+        document.getElementById('dashboard').style.display = 'block';
+    }
 
     const frontCounts = {};
     stateConfig.fronts.forEach(f => frontCounts[f] = 0);
@@ -256,6 +348,10 @@ function processData(data) {
 
     generateSummaryCards(frontCounts);
     renderGrid(districts, pinnedIds);
+    
+    if (searchQuery) {
+        applySearchFilter();
+    }
 }
 
 function determineRowClass(front) {
@@ -352,11 +448,13 @@ function renderGrid(districts, pinnedIds) {
                 else if (cand.party.includes('Dravida Munnetra Kazhagam')) partyAlias = 'DMK';
                 else if (cand.party.includes('Tamilaga Vettri Kazhagam')) partyAlias = 'TVK';
 
+                const crownHtml = (idx === 0 && constituency.isCompleted) ? '<span title="Winner!" style="font-size: 11px; margin-right: 2px;">👑</span>' : '';
+
                 candidateRows += `
                     <div class="cand-row ${isPos1} ${rowFrontClass}">
                         <div class="cand-left">
                             <span class="party-badge party-${subClass}" title="${cand.party}">${partyAlias}</span>
-                            <span class="cand-name" title="${cand.name_eng}">${cand.name_eng}</span>
+                            ${crownHtml}<span class="cand-name" title="${cand.name_eng}">${cand.name_eng}</span>
                         </div>
                         <span class="cand-votes">${candVotes}</span>
                     </div>
@@ -371,8 +469,9 @@ function renderGrid(districts, pinnedIds) {
                 ? `<span style="font-size: 9px; color: #475569; font-weight: 700; margin-left: 2px;">[${constituency.roundText}]</span>` 
                 : '';
 
+            const completedClass = constituency.isCompleted ? ' completed' : '';
             const card = document.createElement('div');
-            card.className = 'constituency-card';
+            card.className = 'constituency-card' + completedClass;
             card.innerHTML = `
                 <div class="c-name-bar">
                     <div class="c-name-wrap">
